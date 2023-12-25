@@ -3,8 +3,8 @@ use starknet::{ContractAddress, Into, TryInto, OptionTrait};
 use starknet::syscalls::deploy_syscall;
 use result::ResultTrait;
 use array::{ArrayTrait, SpanTrait};
-use snforge_std::{declare, ContractClassTrait};
-use snforge_std::io::{FileTrait, read_txt};
+use snforge_std::{declare, ContractClassTrait, CheatTarget};
+use snforge_std::fs::{FileTrait, read_txt};
 use snforge_std::{start_prank, stop_prank};
 use snforge_std::{start_mock_call, stop_mock_call};
 
@@ -53,7 +53,7 @@ fn test_construct_with_admin() {
 fn test_transfer_ownership() {
     let contract_address = deploy_contract('ownable');
     let dispatcher = OwnableTraitDispatcher { contract_address };
-    start_prank(contract_address, Accounts::admin());
+    start_prank(CheatTarget::One(contract_address), Accounts::admin());
     dispatcher.transfer_ownership(Accounts::new_admin());
 
     assert(dispatcher.read_owner() == Accounts::new_admin(), Errors::INVALID_OWNER);
@@ -64,7 +64,7 @@ fn test_transfer_ownership() {
 fn test_transfer_ownership_bad_guy() {
     let contract_address = deploy_contract('ownable');
     let dispatcher = OwnableTraitDispatcher { contract_address };
-    start_prank(contract_address, Accounts::bad_guy());
+    start_prank(CheatTarget::One(contract_address), Accounts::bad_guy());
     dispatcher.transfer_ownership(Accounts::bad_guy());
 
     assert(dispatcher.read_owner() == Accounts::bad_guy(), Errors::INVALID_OWNER);
@@ -76,7 +76,7 @@ fn test_data_mock_call_get_data() {
     let safe_dispatcher = IDataSafeDispatcher { contract_address };
     let mock_ret_data = 100;
     start_mock_call(contract_address, 'get_data', mock_ret_data);
-    start_prank(contract_address, Accounts::admin());
+    start_prank(CheatTarget::One(contract_address), Accounts::admin());
     safe_dispatcher.set_data(20);
     let data = safe_dispatcher.get_data().unwrap();
     assert(data == mock_ret_data, Errors::INVALID_DATA);
@@ -84,5 +84,5 @@ fn test_data_mock_call_get_data() {
 
     let data2 = safe_dispatcher.get_data().unwrap();
     assert(data2 == 20, Errors::INVALID_DATA);
-    stop_prank(contract_address);
+    stop_prank(CheatTarget::One(contract_address));
 }
